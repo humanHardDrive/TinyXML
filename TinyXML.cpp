@@ -23,16 +23,31 @@
 parseTable *pTable = (parseTable *)&stateTable;
 
 
-TinyXML::TinyXML()
+TinyXML::TinyXML() :
+  Xcb(NULL),
+  Xdatacb(NULL),
+  pXcbData(NULL)
 {
 }
 
-void TinyXML::init(uint8_t* buffer, uint16_t maxbuflen, XMLcallback XMLcb)
+void TinyXML::init(uint8_t* buffer, uint16_t maxbuflen, XMLcallback XMLcb) :
+  Xdatacb(NULL),
+  pXcbData(NULL)
 {
   Xcb = XMLcb;
   dataBuffer = buffer;
   maxDataLen = maxbuflen;
   reset();
+}
+
+void TinyXML::init(uint8_t* buffer, uint16_t maxbuflne, XMLdatacallback XMLcb, void* pXMLcbData) :
+  Xcb(NULL),
+  Xdatacb(XMLcb),
+  pXcbData(pXMLcbData),
+  dataBuffer(buffer),
+  maxDataLen(maxbuflen)
+{
+    reset();
 }
 
 void TinyXML::reset()
@@ -42,6 +57,15 @@ void TinyXML::reset()
   LTCount = 0;
   tagCount = 0;
   currentState = Init;
+}
+
+void TinyXML::processString(uint8_t* s)
+{
+    while(*s)
+    {
+        processChar(*s);
+        s++;
+    }
 }
 
 void TinyXML::processChar(uint8_t ch)
@@ -141,7 +165,7 @@ void TinyXML::action(uint8_t ch, uint8_t actionType)
     dataBuffer[dataBufferPtr] = 0; // terminate the text
     // call back if the previous tag text is required
     tagBuffer[tagBufferPtr] = 0;
-    if (tagBufferPtr && dataBufferPtr) Xcb(STATUS_TAG_TEXT,(char*)tagBuffer,tagBufferPtr,(char*)dataBuffer,dataBufferPtr);
+    if (tagBufferPtr && dataBufferPtr) doCallback(STATUS_TAG_TEXT,(char*)tagBuffer,tagBufferPtr,(char*)dataBuffer,dataBufferPtr);
     dataBufferPtr = 0;    // clear down for next time
 #if DEBUG > 2
     Serial.print("starttagname Tag:");
@@ -162,7 +186,7 @@ void TinyXML::action(uint8_t ch, uint8_t actionType)
   case inctagcount:
     tagCount++;
     tagBuffer[tagBufferPtr] = 0;
-    Xcb(STATUS_START_TAG,(char*)tagBuffer,tagBufferPtr,0,0);
+    doCallback(STATUS_START_TAG,(char*)tagBuffer,tagBufferPtr,0,0);
 #if DEBUG > 2
     Serial.print("incTagCount:");
     Serial.print(tagCount,DEC);
@@ -177,7 +201,7 @@ void TinyXML::action(uint8_t ch, uint8_t actionType)
 		break;
 	}
     tagBuffer[tagBufferPtr] = 0;
-    Xcb(STATUS_END_TAG,(char*)tagBuffer,tagBufferPtr,0,0);
+    doCallback(STATUS_END_TAG,(char*)tagBuffer,tagBufferPtr,0,0);
     while (tagBufferPtr && tagBuffer[--tagBufferPtr] != '/'); // as we error if tagBuffer overflows then this will be safe
 #if DEBUG > 3
     tagBuffer[tagBufferPtr] = 0;
@@ -205,7 +229,7 @@ void TinyXML::action(uint8_t ch, uint8_t actionType)
 	}
     tagBufferPtr--;      // we have had a start so back past the last '/' we placed when the tag started
     tagBuffer[tagBufferPtr] = 0;
-    Xcb(STATUS_END_TAG,(char*)tagBuffer,tagBufferPtr,0,0);
+    doCallback(STATUS_END_TAG,(char*)tagBuffer,tagBufferPtr,0,0);
     while (tagBufferPtr && tagBuffer[--tagBufferPtr] != '/'); // as we error if tagBuffer overflows then this will be safe
 #if DEBUG > 3
     tagBuffer[tagBufferPtr] = 0;
@@ -233,10 +257,10 @@ void TinyXML::action(uint8_t ch, uint8_t actionType)
   case gotattrvalue:
     attrBuffer[attrBufferPtr] = 0;
     dataBuffer[dataBufferPtr] = 0;
-    Xcb(STATUS_ATTR_TEXT,(char*)attrBuffer,attrBufferPtr,(char*)dataBuffer,dataBufferPtr);
+    doCallback(STATUS_ATTR_TEXT,(char*)attrBuffer,attrBufferPtr,(char*)dataBuffer,dataBufferPtr);
     break;
   case error:
-    Xcb(STATUS_ERROR,(char*)tagBuffer,tagBufferPtr,(char*)dataBuffer,dataBufferPtr);
+    doCallback(STATUS_ERROR,(char*)tagBuffer,tagBufferPtr,(char*)dataBuffer,dataBufferPtr);
     reset();
    break;
   case initialise:
@@ -245,4 +269,10 @@ void TinyXML::action(uint8_t ch, uint8_t actionType)
   }
 }
 
-
+void TinyXML::doCallback(uint8_t errorflag, char* nameBuffer,  uint16_t namebuflen, char* dataBuffer,  uint16_t databuflen)
+{
+    if(Xcb)
+        Xcb(errorflag, nameBuffer, namebuflen, dataBuffer, databuflen);
+    else if(Xdatacb)
+        Xdatacb(pXcbData, errorflag, nameBuffer, namebuflen, dataBuffer, databuflen);
+}

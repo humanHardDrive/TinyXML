@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 typedef void (*XMLcallback) (uint8_t errorflag, char* nameBuffer,  uint16_t namebuflen, char* dataBuffer,  uint16_t databuflen);
+typedef void (*XMLdatacallback) (void* pData, uint8_t errorflag, char* nameBuffer, uint16_t namebuflen, char* dataBuffer, uint16_t databuflen);
 
 #define isAlpha(ch) ((ch >= 'A' && ch <= 'Z') || (ch>='a' && ch<='z'))
 #define isNumeric(ch) (ch >= '0' && ch <= '9')
@@ -25,6 +26,9 @@ class TinyXML
 {
 private:
   XMLcallback Xcb;
+  XMLdatacallback Xdatacb;
+  void* pXcbData;
+  
   uint8_t tagBuffer[TAGBUFFERMAX];		// allow for terminating zero
   uint16_t tagBufferPtr;
   uint8_t attrBuffer[ATTRBUFFERMAX];		// allow for terminating zero
@@ -40,11 +44,18 @@ private:
   uint8_t checkTagBufferPtr;
 
   void action(uint8_t ch, uint8_t actionType);
+  
+  void doCallback(uint8_t errorflag, char* nameBuffer,  uint16_t namebuflen, char* dataBuffer,  uint16_t databuflen);
+  
 public:
   TinyXML();  // constructor
   void init (uint8_t* buffer, uint16_t maxbuflen, XMLcallback XMLcb);
+  void init (uint8_t* buffer, uint16_t maxbuflne, XMLdatacallback XMLcb, void* pXMLcbData);
+  
   void reset();
+  
   void processChar(uint8_t ch);
+  void processString(uint8_t* s);
 };
 
 #endif
