@@ -55,6 +55,9 @@ public:
   void reset();
   
   void processChar(uint8_t ch);
+  void processChar(uint8_t c, XMLcallback* cb);
+  void processChar(uint8_t c, XMLdatacallback* cb, void* pData);
+  
   void processString(uint8_t* s);
 };
 

@@ -30,24 +30,24 @@ TinyXML::TinyXML() :
 {
 }
 
-void TinyXML::init(uint8_t* buffer, uint16_t maxbuflen, XMLcallback XMLcb) :
-  Xdatacb(NULL),
-  pXcbData(NULL)
+void TinyXML::init(uint8_t* buffer, uint16_t maxbuflen, XMLcallback XMLcb)
 {
   Xcb = XMLcb;
+  Xdatacb = NULL;
+  pXcbData = NULL;
   dataBuffer = buffer;
   maxDataLen = maxbuflen;
   reset();
 }
 
-void TinyXML::init(uint8_t* buffer, uint16_t maxbuflne, XMLdatacallback XMLcb, void* pXMLcbData) :
-  Xcb(NULL),
-  Xdatacb(XMLcb),
-  pXcbData(pXMLcbData),
-  dataBuffer(buffer),
-  maxDataLen(maxbuflen)
+void TinyXML::init(uint8_t* buffer, uint16_t maxbuflen, XMLdatacallback XMLcb, void* pXMLcbData)
 {
-    reset();
+  Xcb = NULL;
+  Xdatacb = XMLcb;
+  pXcbData = pXMLcbData;
+  dataBuffer = buffer;
+  maxDataLen = maxbuflen;
+  reset();
 }
 
 void TinyXML::reset()
@@ -66,6 +66,14 @@ void TinyXML::processString(uint8_t* s)
         processChar(*s);
         s++;
     }
+}
+
+void TinyXML::processChar(uint8_t c, XMLcallback* cb)
+{
+}
+
+void TinyXML::processChar(uint8_t c, XMLdatacallback* cb, void* pData)
+{
 }
 
 void TinyXML::processChar(uint8_t ch)
